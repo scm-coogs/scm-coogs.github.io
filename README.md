@@ -9,7 +9,7 @@ results.
 
 ## Run locally
 
-Requires Python 3.10 or newer and NASA Earthdata Login credentials:
+Requires Python 3.11 or newer and NASA Earthdata Login credentials:
 
 ```bash
 python -m venv .venv
