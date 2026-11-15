@@ -1,0 +1,30 @@
+{
+  "title": "Galveston Bay benzene detection (SAMPLE DATA)",
+  "boundary": "data/galveston-boundary.geojson",
+  "snapshots": [
+    {
+      "label": "2023 Jan–Jun",
+      "file": "data/2023-H1.geojson"
+    },
+    {
+      "label": "2023 Jul–Dec",
+      "file": "data/2023-H2.geojson"
+    },
+    {
+      "label": "2024 Jan–Jun",
+      "file": "data/2024-H1.geojson"
+    },
+    {
+      "label": "2024 Jul–Dec",
+      "file": "data/2024-H2.geojson"
+    },
+    {
+      "label": "2025 Jan–Jun",
+      "file": "data/2025-H1.geojson"
+    },
+    {
+      "label": "2025 Jul–Dec",
+      "file": "data/2025-H2.geojson"
+    }
+  ]
+}

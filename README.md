@@ -32,6 +32,41 @@ locally or deploy it to a Python-capable host. Do not expose a deployment that
 uses shared Earthdata credentials publicly without adding appropriate access
 controls.
 
+## Static site (GitHub Pages)
+
+The site is static: it only displays files that were prepared offline.
+
+- [index.html](index.html): the **benzene detection snapshot viewer** for Galveston Bay.
+  A dropdown/slider switches between 6-month snapshots, and each snapshot is drawn as
+  shaded polygons over an OpenStreetMap basemap (red = detected, white = not detected,
+  grey = no coverage).
+
+### Data workflow
+
+1. Download and aggregate the spectroscopy data locally (e.g. in QGIS) per period, such as
+   Jan–Jun and Jul–Dec of each year.
+2. Grid the study area, classify each cell, and export one GeoJSON per period in
+   EPSG:4326 (plain longitude/latitude). Each polygon needs a `status` property:
+   `detected`, `not_detected` or `no_coverage`. Coordinates are `[longitude, latitude]`
+   and rings must be closed.
+3. Put the files in [data/](data) and list them, oldest first, in
+   [data/manifest.json](data/manifest.json) (`label` + `file`).
+4. Optional: export the Galveston shapefile as GeoJSON (reproject to EPSG:4326, simplify)
+   to `data/galveston-boundary.geojson`. It is drawn as an outline when present, and is
+   also useful for clipping polygons to water.
+
+The files currently in `data/` are **randomly generated sample data** and must be replaced.
+Check which instrument/product actually measures benzene (or whether a proxy such as
+formaldehyde is used) and say so on the map.
+
+### Deploy
+
+Set Settings → Pages → Source to "GitHub Actions". Each push to `main` publishes
+`index.html` and `data/` via
+[.github/workflows/pages.yml](.github/workflows/pages.yml). Everything pushed is public.
+Preview locally with `python -m http.server` and open http://localhost:8000
+(opening the file directly will not work).
+
 ## Tests
 
 ```bash

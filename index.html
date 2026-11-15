@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Benzene detection snapshots</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  html, body, #map { height: 100%; margin: 0; }
+  .panel { position: absolute; z-index: 1000; background: #fff; padding: 8px 12px; border-radius: 4px;
+           font: 14px system-ui, sans-serif; box-shadow: 0 1px 5px rgba(0,0,0,.4); }
+  #controls { top: 10px; right: 10px; width: 260px; }
+  #legend { bottom: 24px; left: 10px; }
+  #controls select, #controls input { width: 100%; box-sizing: border-box; }
+  .sw { display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-right: 6px; border: 1px solid #555; }
+  h1 { font-size: 15px; margin: 0 0 6px; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="controls" class="panel">
+  <h1 id="title">Loading…</h1>
+  <label>Snapshot <select id="snap"></select></label>
+  <input id="slider" type="range" min="0" value="0">
+  <div id="msg"></div>
+</div>
+<div id="legend" class="panel">
+  <div><span class="sw" style="background:#e53935"></span>Benzene detected</div>
+  <div><span class="sw" style="background:#fff"></span>Not detected</div>
+  <div><span class="sw" style="background:#9e9e9e"></span>No coverage</div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const map = L.map('map').setView([29.4, -94.8], 9);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  { maxZoom: 18, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+
+const STYLES = {
+  detected:     { color: '#b71c1c', weight: 1, fillColor: '#e53935', fillOpacity: .55 },
+  not_detected: { color: '#90a4ae', weight: .5, fillColor: '#ffffff', fillOpacity: .1 },
+  no_coverage:  { color: '#757575', weight: .5, fillColor: '#9e9e9e', fillOpacity: .35 }
+};
+const LABELS = { detected: 'Benzene detected', not_detected: 'Not detected', no_coverage: 'No coverage' };
+
+let manifest, layer;
+const cache = {};
+
+async function show(i) {
+  const s = manifest.snapshots[i];
+  $('snap').value = i; $('slider').value = i;
+  $('msg').textContent = 'Loading…';
+  try {
+    cache[s.file] = cache[s.file] || await fetch(s.file).then(r => {
+      if (!r.ok) throw new Error(`${s.file}: HTTP ${r.status}`);
+      return r.json();
+    });
+  } catch (e) { $('msg').textContent = 'Failed to load ' + e.message; return; }
+  if (layer) layer.remove();
+  layer = L.geoJSON(cache[s.file], {
+    style: f => STYLES[f.properties.status] || STYLES.no_coverage,
+    onEachFeature: (f, l) => l.bindTooltip(
+      `${LABELS[f.properties.status] || 'Unknown'} (${s.label})`, { sticky: true })
+  }).addTo(map);
+  $('msg').textContent = '';
+}
+
+fetch('data/manifest.json').then(r => r.json()).then(async m => {
+  manifest = m;
+  $('title').textContent = m.title;
+  document.title = m.title;
+  m.snapshots.forEach((s, i) => $('snap').add(new Option(s.label, i)));
+  $('slider').max = m.snapshots.length - 1;
+  $('snap').onchange = e => show(+e.target.value);
+  $('slider').oninput = e => show(+e.target.value);
+  if (m.boundary) {
+    fetch(m.boundary).then(r => r.ok ? r.json() : null).then(b => {
+      if (b) L.geoJSON(b, { style: { color: '#1565c0', weight: 2, fill: false }, interactive: false }).addTo(map);
+    }).catch(() => {});
+  }
+  show(m.snapshots.length - 1);
+}).catch(e => { $('title').textContent = 'Could not load data/manifest.json: ' + e.message; });
+</script>
+</body>
+</html>
