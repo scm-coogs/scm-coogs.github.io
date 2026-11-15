@@ -1,30 +1,79 @@
 {
-  "title": "Galveston Bay benzene detection (SAMPLE DATA)",
+  "title": "Galveston Bay water quality (SAMPLE DATA)",
   "boundary": "data/galveston-boundary.geojson",
-  "snapshots": [
+  "layers": [
     {
-      "label": "2023 Jan–Jun",
-      "file": "data/2023-H1.geojson"
+      "id": "benzene",
+      "name": "Benzene detection",
+      "type": "status",
+      "snapshots": [
+        {
+          "label": "2023 Jan–Jun",
+          "file": "data/benzene/2023-H1.geojson"
+        },
+        {
+          "label": "2023 Jul–Dec",
+          "file": "data/benzene/2023-H2.geojson"
+        },
+        {
+          "label": "2024 Jan–Jun",
+          "file": "data/benzene/2024-H1.geojson"
+        },
+        {
+          "label": "2024 Jul–Dec",
+          "file": "data/benzene/2024-H2.geojson"
+        },
+        {
+          "label": "2025 Jan–Jun",
+          "file": "data/benzene/2025-H1.geojson"
+        },
+        {
+          "label": "2025 Jul–Dec",
+          "file": "data/benzene/2025-H2.geojson"
+        }
+      ],
+      "description": "Where benzene was detected in each 6-month period. Recency view colors each cell by how recently it was last detected."
     },
     {
-      "label": "2023 Jul–Dec",
-      "file": "data/2023-H2.geojson"
-    },
-    {
-      "label": "2024 Jan–Jun",
-      "file": "data/2024-H1.geojson"
-    },
-    {
-      "label": "2024 Jul–Dec",
-      "file": "data/2024-H2.geojson"
-    },
-    {
-      "label": "2025 Jan–Jun",
-      "file": "data/2025-H1.geojson"
-    },
-    {
-      "label": "2025 Jul–Dec",
-      "file": "data/2025-H2.geojson"
+      "id": "turbidity",
+      "name": "Turbidity",
+      "type": "numeric",
+      "property": "value",
+      "unit": "NTU",
+      "min": 0,
+      "max": 80,
+      "palette": [
+        "#f7f4e9",
+        "#c9a66b",
+        "#6b4226"
+      ],
+      "snapshots": [
+        {
+          "label": "2023 Jan–Jun",
+          "file": "data/turbidity/2023-H1.geojson"
+        },
+        {
+          "label": "2023 Jul–Dec",
+          "file": "data/turbidity/2023-H2.geojson"
+        },
+        {
+          "label": "2024 Jan–Jun",
+          "file": "data/turbidity/2024-H1.geojson"
+        },
+        {
+          "label": "2024 Jul–Dec",
+          "file": "data/turbidity/2024-H2.geojson"
+        },
+        {
+          "label": "2025 Jan–Jun",
+          "file": "data/turbidity/2025-H1.geojson"
+        },
+        {
+          "label": "2025 Jul–Dec",
+          "file": "data/turbidity/2025-H2.geojson"
+        }
+      ],
+      "description": "Water cloudiness (NTU) per period. Grey cells have no valid observation."
     }
   ]
 }

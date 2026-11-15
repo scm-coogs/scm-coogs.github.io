@@ -35,23 +35,60 @@ controls.
 ## Static site (GitHub Pages)
 
 The site is static: it only displays files that were prepared offline.
+[index.html](index.html) is a map of Galveston Bay (panning/zoom limited to the
+Galveston–Houston area) with a layer picker and a slider to step through 6-month snapshots.
 
-- [index.html](index.html): the **benzene detection snapshot viewer** for Galveston Bay.
-  A dropdown/slider switches between 6-month snapshots, and each snapshot is drawn as
-  shaded polygons over an OpenStreetMap basemap (red = detected, white = not detected,
-  grey = no coverage).
+Layers are listed in [data/manifest.json](data/manifest.json). Two are included:
+
+- **Benzene detection** (`type: "status"`). Two views: *Status* (red = detected,
+  white = not detected, grey = no coverage) and *Recency*, which colors each cell by how
+  recently benzene was last detected, as of the selected snapshot (red = now, fading to
+  pale yellow = long ago, white = never).
+- **Turbidity** (`type: "numeric"`), shaded on a color scale. Use the same approach for
+  sediment or any other measured value.
+
+### Data format
+
+One GeoJSON file per snapshot, in EPSG:4326 (plain longitude/latitude). Coordinates are
+`[longitude, latitude]` and polygon rings must be closed.
+
+| Layer type | Required polygon property | Values |
+|---|---|---|
+| `status` | `status` | `detected`, `not_detected`, `no_coverage` |
+| `numeric` | the name in the layer's `property` (e.g. `value`) | a number, or `null` for no data |
+
+Recency matches cells across snapshots, so every snapshot of a layer should use the same
+grid. Give each polygon a `cell_id` property to make that explicit (otherwise identical
+geometry is used as the id).
+
+### Adding a layer (e.g. sediment)
+
+1. Put the files in `data/<layer>/` (e.g. `data/sediment/2024-H1.geojson`).
+2. Add an entry to `layers` in [data/manifest.json](data/manifest.json):
+
+```json
+{
+  "id": "sediment",
+  "name": "Suspended sediment",
+  "type": "numeric",
+  "property": "value",
+  "unit": "mg/L",
+  "min": 0,
+  "max": 100,
+  "palette": ["#f7f4e9", "#c9a66b", "#6b4226"],
+  "description": "Shown under the map.",
+  "snapshots": [{ "label": "2024 Jan–Jun", "file": "data/sediment/2024-H1.geojson" }]
+}
+```
+
+Each layer has its own snapshot list (oldest first), so layers need not share dates.
+No code changes are needed.
 
 ### Data workflow
 
-1. Download and aggregate the spectroscopy data locally (e.g. in QGIS) per period, such as
-   Jan–Jun and Jul–Dec of each year.
-2. Grid the study area, classify each cell, and export one GeoJSON per period in
-   EPSG:4326 (plain longitude/latitude). Each polygon needs a `status` property:
-   `detected`, `not_detected` or `no_coverage`. Coordinates are `[longitude, latitude]`
-   and rings must be closed.
-3. Put the files in [data/](data) and list them, oldest first, in
-   [data/manifest.json](data/manifest.json) (`label` + `file`).
-4. Optional: export the Galveston shapefile as GeoJSON (reproject to EPSG:4326, simplify)
+1. Download and aggregate the data locally (e.g. in QGIS) per period.
+2. Grid the study area, classify or measure each cell, and export one GeoJSON per period.
+3. Optional: export the Galveston shapefile as GeoJSON (reproject to EPSG:4326, simplify)
    to `data/galveston-boundary.geojson`. It is drawn as an outline when present, and is
    also useful for clipping polygons to water.
 
@@ -62,10 +99,9 @@ formaldehyde is used) and say so on the map.
 ### Deploy
 
 Set Settings → Pages → Source to "GitHub Actions". Each push to `main` publishes
-`index.html` and `data/` via
-[.github/workflows/pages.yml](.github/workflows/pages.yml). Everything pushed is public.
-Preview locally with `python -m http.server` and open http://localhost:8000
-(opening the file directly will not work).
+`index.html` and `data/` via [.github/workflows/pages.yml](.github/workflows/pages.yml).
+Everything pushed is public. Preview locally with `python -m http.server` and open
+http://localhost:8000 (opening the file directly will not work).
 
 ## Tests
 

@@ -6,35 +6,86 @@
 <title>Benzene detection snapshots</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-  html, body, #map { height: 100%; margin: 0; }
-  .panel { position: absolute; z-index: 1000; background: #fff; padding: 8px 12px; border-radius: 4px;
-           font: 14px system-ui, sans-serif; box-shadow: 0 1px 5px rgba(0,0,0,.4); }
-  #controls { top: 10px; right: 10px; width: 260px; }
-  #legend { bottom: 24px; left: 10px; }
-  #controls select, #controls input { width: 100%; box-sizing: border-box; }
-  .sw { display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-right: 6px; border: 1px solid #555; }
-  h1 { font-size: 15px; margin: 0 0 6px; }
+  body { font-family: system-ui, sans-serif; color: #222; margin: 0; background: #f5f7fa; line-height: 1.5; }
+  header, main, footer { max-width: 960px; margin: 0 auto; padding: 0 1rem; }
+  header { padding-top: 1.5rem; }
+  h1 { margin: 0 0 .25rem; font-size: 1.6rem; }
+  .lede { margin: 0 0 1rem; color: #444; }
+  .window { background: #fff; border: 1px solid #cfd8dc; border-radius: 8px; overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+  .titlebar { display: flex; justify-content: space-between; align-items: center; padding: .5rem .8rem;
+              background: #eceff1; border-bottom: 1px solid #cfd8dc; font-size: .9rem; }
+  #map { height: 520px; max-height: 70vh; position: relative; }
+  .legend { position: absolute; z-index: 1000; bottom: 10px; left: 10px; background: rgba(255,255,255,.92);
+            padding: 6px 10px; border-radius: 4px; font-size: 13px; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+  .sw { display: inline-block; width: 12px; height: 12px; vertical-align: middle; margin-right: 6px; border: 1px solid #555; }
+  .timeline { padding: .8rem 1rem 1rem; border-top: 1px solid #cfd8dc; }
+  .timeline-row { display: flex; align-items: center; gap: .6rem; }
+  .timeline button { border: 1px solid #90a4ae; background: #fff; border-radius: 4px; padding: .2rem .7rem;
+                     font-size: 1rem; cursor: pointer; }
+  .timeline button:disabled { opacity: .4; cursor: default; }
+  #slider { flex: 1; }
+  .controls { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .controls label { display: flex; align-items: center; gap: .4rem; }
+  .bar { height: 10px; width: 160px; border: 1px solid #555; margin: 3px 0; }
+  .bar-labels { display: flex; justify-content: space-between; font-size: 11px; }
+  [hidden] { display: none !important; }
+  .ticks { display: flex; justify-content: space-between; margin: .2rem 4.2rem 0; font-size: .75rem; color: #555; }
+  #current { text-align: center; font-weight: 600; margin-bottom: .4rem; }
+  section { margin: 1.5rem 0; }
+  footer { padding-bottom: 2rem; color: #555; font-size: .85rem; }
 </style>
 </head>
 <body>
-<div id="map"></div>
-<div id="controls" class="panel">
-  <h1 id="title">Loading…</h1>
-  <label>Snapshot <select id="snap"></select></label>
-  <input id="slider" type="range" min="0" value="0">
-  <div id="msg"></div>
-</div>
-<div id="legend" class="panel">
-  <div><span class="sw" style="background:#e53935"></span>Benzene detected</div>
-  <div><span class="sw" style="background:#fff"></span>Not detected</div>
-  <div><span class="sw" style="background:#9e9e9e"></span>No coverage</div>
-</div>
+<header>
+  <h1 id="title">Benzene detection snapshots</h1>
+  <p class="lede">Shaded regions show where benzene was detected in the Galveston Bay area in each
+    6-month period. Use the slider under the map to move through time.</p>
+</header>
+<main>
+  <div class="window">
+    <div class="titlebar">
+      <span class="controls">
+        <label>Layer <select id="layer"></select></label>
+        <label id="viewWrap" hidden>View
+          <select id="view"><option value="status">Status</option><option value="recency">Recency</option></select>
+        </label>
+      </span>
+      <span id="msg"></span>
+    </div>
+    <div id="map">
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="timeline">
+      <div id="current">Loading…</div>
+      <div class="timeline-row">
+        <button id="prev" aria-label="Previous snapshot">◀</button>
+        <input id="slider" type="range" min="0" max="0" value="0" aria-label="Snapshot">
+        <button id="next" aria-label="Next snapshot">▶</button>
+      </div>
+      <div class="ticks" id="ticks"></div>
+    </div>
+  </div>
+  <section>
+    <h2 id="layerName">About this map</h2>
+    <p id="layerDesc"></p>
+    <p>Each snapshot aggregates observations for one 6-month period. Cells with no usable
+      observations are shown as "no coverage" rather than "not detected".</p>
+  </section>
+</main>
+<footer>Sample data is shown until real results are added. Basemap © OpenStreetMap contributors.</footer>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const $ = id => document.getElementById(id);
-const map = L.map('map').setView([29.4, -94.8], 9);
+
+// Focus on Galveston, with Houston at the north-west edge.
+const BOUNDS = L.latLngBounds([28.9, -95.9], [30.2, -94.2]);
+const map = L.map('map', {
+  maxBounds: BOUNDS, maxBoundsViscosity: 1.0,
+  minZoom: 9, maxZoom: 14, zoomSnap: 0.5
+}).fitBounds(L.latLngBounds([29.0, -95.5], [29.9, -94.5]));
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  { maxZoom: 18, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+  { maxZoom: 14, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
 
 const STYLES = {
   detected:     { color: '#b71c1c', weight: 1, fillColor: '#e53935', fillOpacity: .55 },
@@ -42,43 +93,132 @@ const STYLES = {
   no_coverage:  { color: '#757575', weight: .5, fillColor: '#9e9e9e', fillOpacity: .35 }
 };
 const LABELS = { detected: 'Benzene detected', not_detected: 'Not detected', no_coverage: 'No coverage' };
+const RECENCY = ['#b71c1c', '#f4511e', '#fb8c00', '#fdd835', '#fff59d']; // newest -> oldest
+const NODATA = { color: '#757575', weight: .5, fillColor: '#9e9e9e', fillOpacity: .35 };
 
-let manifest, layer;
+let manifest, layerDef, layer, current = -1, token = 0;
 const cache = {};
 
+function load(file) {
+  cache[file] = cache[file] || fetch(file).then(r => {
+    if (!r.ok) throw new Error(`${file}: HTTP ${r.status}`);
+    return r.json();
+  }).catch(e => { delete cache[file]; throw e; });
+  return cache[file];
+}
+
+function lerpColor(palette, t) {
+  t = Math.max(0, Math.min(1, t)) * (palette.length - 1);
+  const i = Math.min(Math.floor(t), palette.length - 2), f = t - i;
+  const rgb = h => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16));
+  const [a, b] = [rgb(palette[i]), rgb(palette[i + 1])];
+  return '#' + a.map((v, k) => Math.round(v + (b[k] - v) * f).toString(16).padStart(2, '0')).join('');
+}
+
+// Stable per-cell id: use a cell_id property if provided, else the geometry itself.
+const cellKey = f => (f.properties && f.properties.cell_id) || JSON.stringify(f.geometry);
+
+function setLegend(html) { $('legend').innerHTML = html; }
+const swatch = (c, t) => `<div><span class="sw" style="background:${c}"></span>${t}</div>`;
+const gradient = (colors, lo, hi) => `<div class="bar" style="background:linear-gradient(90deg,${colors.join(',')})"></div>
+  <div class="bar-labels"><span>${lo}</span><span>${hi}</span></div>`;
+
+function viewMode() { return layerDef.type === 'status' ? $('view').value : 'numeric'; }
+
 async function show(i) {
-  const s = manifest.snapshots[i];
-  $('snap').value = i; $('slider').value = i;
+  const snaps = layerDef.snapshots;
+  i = Math.max(0, Math.min(snaps.length - 1, i));
+  const s = snaps[i], my = ++token, mode = viewMode();
+  current = i;
+  $('slider').value = i;
+  $('prev').disabled = i === 0;
+  $('next').disabled = i === snaps.length - 1;
+  $('current').textContent = s.label;
   $('msg').textContent = 'Loading…';
+
+  let data, lastSeen;
   try {
-    cache[s.file] = cache[s.file] || await fetch(s.file).then(r => {
-      if (!r.ok) throw new Error(`${s.file}: HTTP ${r.status}`);
-      return r.json();
-    });
-  } catch (e) { $('msg').textContent = 'Failed to load ' + e.message; return; }
+    if (mode === 'recency') {
+      const all = await Promise.all(snaps.slice(0, i + 1).map(x => load(x.file)));
+      data = all[i];
+      lastSeen = {};
+      all.forEach((d, k) => d.features.forEach(f => {
+        if (f.properties.status === 'detected') lastSeen[cellKey(f)] = k;
+      }));
+    } else {
+      data = await load(s.file);
+    }
+  } catch (e) { if (my === token) $('msg').textContent = 'Failed to load ' + e.message; return; }
+  if (my !== token) return; // a newer selection superseded this load
+
   if (layer) layer.remove();
-  layer = L.geoJSON(cache[s.file], {
-    style: f => STYLES[f.properties.status] || STYLES.no_coverage,
-    onEachFeature: (f, l) => l.bindTooltip(
-      `${LABELS[f.properties.status] || 'Unknown'} (${s.label})`, { sticky: true })
+  let style, tip;
+  if (mode === 'recency') {
+    style = f => {
+      const k = lastSeen[cellKey(f)];
+      if (k === undefined) return { color: '#90a4ae', weight: .5, fillColor: '#fff', fillOpacity: .05 };
+      return { color: '#8d1b1b', weight: .5, fillOpacity: .65,
+               fillColor: RECENCY[Math.min(i - k, RECENCY.length - 1)] };
+    };
+    tip = f => {
+      const k = lastSeen[cellKey(f)];
+      return k === undefined ? `Never detected up to ${s.label}`
+        : `Last detected: ${snaps[k].label}${i - k ? ` (${i - k} period${i - k > 1 ? 's' : ''} earlier)` : ''}`;
+    };
+    setLegend(gradient(RECENCY, 'Detected now', 'Long ago') + swatch('#fff', 'Never detected'));
+  } else if (mode === 'numeric') {
+    const def = layerDef;
+    style = f => {
+      const v = f.properties[def.property];
+      if (v === null || v === undefined || !Number.isFinite(+v)) return NODATA;
+      return { color: '#555', weight: .3, fillOpacity: .7,
+               fillColor: lerpColor(def.palette, (v - def.min) / (def.max - def.min)) };
+    };
+    tip = f => {
+      const v = f.properties[def.property];
+      return v === null || v === undefined ? 'No data' : `${v} ${def.unit || ''}`;
+    };
+    setLegend(gradient(def.palette, `${def.min} ${def.unit || ''}`, `${def.max}+ ${def.unit || ''}`) + swatch('#9e9e9e', 'No data'));
+  } else {
+    style = f => STYLES[f.properties.status] || STYLES.no_coverage;
+    tip = f => LABELS[f.properties.status] || 'Unknown';
+    setLegend(swatch('#e53935', 'Benzene detected') + swatch('#fff', 'Not detected') + swatch('#9e9e9e', 'No coverage'));
+  }
+  layer = L.geoJSON(data, {
+    style, onEachFeature: (f, l) => l.bindTooltip(`${tip(f)} (${s.label})`, { sticky: true })
   }).addTo(map);
   $('msg').textContent = '';
 }
 
-fetch('data/manifest.json').then(r => r.json()).then(async m => {
+function selectLayer(id) {
+  layerDef = manifest.layers.find(l => l.id === id);
+  const snaps = layerDef.snapshots;
+  $('viewWrap').hidden = layerDef.type !== 'status';
+  $('view').value = 'status';
+  $('layerName').textContent = layerDef.name;
+  $('layerDesc').textContent = layerDef.description || '';
+  $('slider').max = snaps.length - 1;
+  $('ticks').innerHTML = '';
+  snaps.forEach(x => { const t = document.createElement('span'); t.textContent = x.label; $('ticks').append(t); });
+  show(snaps.length - 1);
+}
+
+fetch('data/manifest.json').then(r => r.json()).then(m => {
   manifest = m;
   $('title').textContent = m.title;
   document.title = m.title;
-  m.snapshots.forEach((s, i) => $('snap').add(new Option(s.label, i)));
-  $('slider').max = m.snapshots.length - 1;
-  $('snap').onchange = e => show(+e.target.value);
+  m.layers.forEach(l => $('layer').add(new Option(l.name, l.id)));
+  $('layer').onchange = e => selectLayer(e.target.value);
+  $('view').onchange = () => show(current);
   $('slider').oninput = e => show(+e.target.value);
+  $('prev').onclick = () => show(current - 1);
+  $('next').onclick = () => show(current + 1);
   if (m.boundary) {
     fetch(m.boundary).then(r => r.ok ? r.json() : null).then(b => {
       if (b) L.geoJSON(b, { style: { color: '#1565c0', weight: 2, fill: false }, interactive: false }).addTo(map);
     }).catch(() => {});
   }
-  show(m.snapshots.length - 1);
+  selectLayer(m.layers[0].id);
 }).catch(e => { $('title').textContent = 'Could not load data/manifest.json: ' + e.message; });
 </script>
 </body>
